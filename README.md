@@ -5,7 +5,7 @@ Howdy folks! Welcome to my snakemake pipeline for processing historical WGS data
 Sheela uses the perl-based prinse-lite program to filter out low-complexity reads prior to mapping. I use the faster C++ implementation of this program (prinseq++), b/c it is faster, but also b/c it is available on conda.
 
 ## Finicky bits
-SeqPrep2 is not available on conda, so you will have to download the binary for this program and update the [path]() with your own.
+SeqPrep2 is not available on conda, so you will have to download the binary for this program and update the [path](https://github.com/foxholden/hDNA-wgs-snakeflow/blob/main/workflow/rules/mapping.smk) with your own.
 
 I haven't figure out the best way to deal with this problem yet, but depending on the amount of DNA damage in your samples, you may or may not rescale base quality scores. This workflow assumes all samples will need rescaling. If you haved samples with DNA damage levels too low to warrant rescaling, either use the rescaled bams anyways (they shouldn't change much i don't think), or mv the rmdup bams into the rescaled bams folder, touch, and proceed.
 

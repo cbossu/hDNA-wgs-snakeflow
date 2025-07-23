@@ -9,7 +9,9 @@ SeqPrep2 is not available on conda, so you will have to download the binary for 
 
 I haven't figure out the best way to deal with this problem yet, but depending on the amount of DNA damage in your samples, you may or may not rescale base quality scores. This workflow assumes all samples will need rescaling. If you haved samples with DNA damage levels too low to warrant rescaling, either use the rescaled bams anyways (they shouldn't change much i don't think), or mv the rmdup bams into the rescaled bams folder, touch, and proceed.
 
-You may not be able to call genotypes after mapping with bwa aln + samse. You will need to try to figure out how to move past this.
+You may not be able to call genotypes after mapping with bwa aln + samse. I need to try to figure out how to move past this (i.e. add read groups back to samples so that you can use called genotypes). Honestly, if you are using hDNA, you should use an ANGSD based LCWGS pipeline like Locopipe (even if you do use this protocol for mapping).
+
+This pipeline generates a LOT of data (especially b/c some intermediate files are not gzipped). I need to go into rules and write moe outputs to temp in order to save space.
 
 ## Prep configs
 Follow this markdown. See the mnm snakeflow for more detail.

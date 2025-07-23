@@ -1,5 +1,5 @@
 # hDNA-wgs-snakeflow
-Howdy folks! Welcome to my snakemake pipeline for processing historical WGS data. The skeleton for this workflow is from [Eriq's mega-non-model-wgs-snakeflow](https://github.com/eriqande/mega-non-model-wgs-snakeflow), but adapted to follow [Sheela's for hDNA processing](https://www.nature.com/articles/s41558-023-01696-3).
+Howdy folks! Welcome to my snakemake pipeline for processing historical WGS data. The skeleton for this workflow is from [Eriq's mega-non-model-wgs-snakeflow](https://github.com/eriqande/mega-non-model-wgs-snakeflow), but adapted to follow [Sheela's for hDNA processing protocol](https://www.nature.com/articles/s41558-023-01696-3).
 
 ## Where I stray from Sheela's protocol
 Sheela uses the perl-based prinse-lite program to filter out low-complexity reads prior to mapping. I use the faster C++ implementation of this program (prinseq++), b/c it is faster, but also b/c it is available on conda.

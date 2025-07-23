@@ -16,7 +16,7 @@ rule seqprep2_trim_merge:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/seqprep2_trim_merge/{sample}---{unit}.bmk"
     shell:
-        "/projects/foxhol@colostate.edu/SeqPrep2/SeqPrep2 "
+        "/projects/foxhol@colostate.edu/SeqPrep2/SeqPrep2 " #binary path to change
         "-f {input.r1} -r {input.r2} "
         "-1 /dev/null -2 /dev/null -s {output.merged} "
         "-A {params.adapter_a} -B {params.adapter_b} "

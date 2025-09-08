@@ -48,7 +48,7 @@ rule thin_bam:
     benchmark:
         "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/thin_bams/{sample}.bmk"
     conda:
-        "../envs/samtools.yaml"
+        "bioinf"
     shell:
         " ( "
         " OPT=$(awk 'NR>1 && $1==\"{wildcards.sample}\" {{ wc = \"{wildcards.cov}\"; if(wc == \"FD\") {{print \"NOSAMPLE\"; exit}} fract = wc / $NF; if(fract < 1) print fract; else print \"NOSAMPLE\"; }}' {input.dps});  "

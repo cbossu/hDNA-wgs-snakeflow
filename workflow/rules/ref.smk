@@ -8,7 +8,7 @@ rule get_genome:
     params:
         url=config["ref"]["genome_url"],
     conda:
-        "../envs/wget.yaml"
+        "wget"
     shell:
         " (tmp_dir=$(mktemp -d) && "
         " URL={params.url} && "
@@ -27,7 +27,7 @@ rule genome_faidx:
     benchmark:
         "results/bqsr-round-0/benchmarks/genome_faidx/genome_faidx.bmk",
     conda:
-        "../envs/samtools.yaml"
+        "bioinf"
     shell:
         "samtools faidx {input}"
 
@@ -42,7 +42,7 @@ rule genome_dict:
     benchmark:
         "results/bqsr-round-0/benchmarks/genome_dict/genome_dict.bmk"
     conda:
-        "../envs/samtools.yaml"
+        "bioinf"
     shell:
         "samtools dict {input} > {output} 2> {log} "
 
@@ -56,7 +56,9 @@ rule bwa_index:
         multiext("resources/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
     log:
         "results/bqsr-round-0/logs/bwa_index.log",
-    benchmark:
+     conda:
+        "bwa"
+   benchmark:
         "results/bqsr-round-0/benchmarks/bwa_index/bwa_index.bmk",
     resources:
         mem_mb=36900,

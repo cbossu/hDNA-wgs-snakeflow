@@ -50,6 +50,8 @@ rule merge_calls:
         ),
     output:
         vcf="filtered/all.vcf.gz",
+    conda:
+        "picard"
     log:
         "logs/picard/merge-filtered.log",
     wrapper:

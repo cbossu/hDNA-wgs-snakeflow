@@ -16,7 +16,7 @@ rule seqprep2_trim_merge:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/seqprep2_trim_merge/{sample}---{unit}.bmk"
     shell:
-        "/projects/foxhol@colostate.edu/SeqPrep2/SeqPrep2 " #binary path to change
+        "/projects/cbossu@colostate.edu/SeqPrep2/SeqPrep2 " #binary path to change
         "-f {input.r1} -r {input.r2} "
         "-1 /dev/null -2 /dev/null -s {output.merged} "
         "-A {params.adapter_a} -B {params.adapter_b} "
@@ -29,14 +29,14 @@ rule prinseqpp_filter_dust:
     input:
         fq="results/bqsr-round-{bqsr_round}/trim-merged/{sample}---{unit}.merged.fastq.gz"
     output:
-        good="results/bqsr-round-{bqsr_round}/filtered/{sample}---{unit}.filtered.fastq"
+        good="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq"
     log:
         "results/bqsr-round-{bqsr_round}/logs/prinseq/{sample}---{unit}.log"
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/prinseq/{sample}---{unit}.bmk"
     threads: 2
     conda:
-        "../envs/prinseqpp.yaml"
+        "prinseqpp"
     shell:
         """
         prinseq++ \
@@ -47,68 +47,129 @@ rule prinseqpp_filter_dust:
         """
 
 #align the filtered historical dna to the reference genome using the aln (-l 1024) and samse commands in BWA.
+# I split this into two functions using wrappers so I could sort and add read groups and filter by -q 30
+#rule align_reads:
+#    input:
+#        ref="resources/genome.fasta",
+#        index=expand("resources/genome.fasta.{ext}", ext=["amb", "ann", "bwt", "pac", "sa"]),
+#        reads="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq"
+#    output:
+#        sam="results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sam"
+#    conda:
+#        "bwa"
+#    log:
+#        "results/bqsr-round-{bqsr_round}/logs/map_aln_samse/{sample}---{unit}.log"
+#    benchmark:
+#        "results/bqsr-round-{bqsr_round}/benchmarks/map_aln_samse/{sample}---{unit}.bmk"
+#    threads: 4
+#    shell:
+#        """
+#        bwa aln -l 1024 -t {threads} {input.ref} {input.reads} > {output.sam}.sai 2>> {log}
+#        bwa samse {input.ref} {output.sam}.sai {input.reads} > {output.sam} 2>> {log}
+#        rm {output.sam}.sai
+#        """
+
 rule align_reads:
     input:
         ref="resources/genome.fasta",
         index=expand("resources/genome.fasta.{ext}", ext=["amb", "ann", "bwt", "pac", "sa"]),
-        reads="results/bqsr-round-{bqsr_round}/filtered/{sample}---{unit}.filtered.fastq"
+        reads="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq"
     output:
-        sam="results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sam"
+        sam="results/bqsr-round-{bqsr_round}/sai/{sample}---{unit}.sai",
     conda:
-        "../envs/bwa.yaml"
+        "bwa"
+    params:
+        extra="-l 1024",
     log:
-        "results/bqsr-round-{bqsr_round}/logs/map_aln_samse/{sample}---{unit}.log"
-    benchmark:
-        "results/bqsr-round-{bqsr_round}/benchmarks/map_aln_samse/{sample}---{unit}.bmk"
+        "results/bqsr-round-{bqsr_round}/logs/bwa_aln/{sample}.{pair}.log",
     threads: 4
-    shell:
-        """
-        bwa aln -l 1024 -t {threads} {input.ref} {input.reads} > {output.sam}.sai 2>> {log}
-        bwa samse {input.ref} {output.sam}.sai {input.reads} > {output.sam} 2>> {log}
-        rm {output.sam}.sai
-        """
-        
+    wrapper:
+        "v1.23.3/bio/bwa/aln"        
+
 # use samtools to convert sam to bam files with minimum mapping quality of 30 (for each unit) and sort.
-rule sam_to_bam_sorted:
+#rule sam_to_bam_sorted:
+#    input:
+#        "results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sam"
+#    output:
+#        "results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sorted.bam"
+#    log:
+#        "results/bqsr-round-{bqsr_round}/logs/samtools/sorted_bams/{sample}---{unit}.log"
+#    conda:
+#        "bioinf"
+#    threads: 10    
+#    shell:
+#        """
+#        samtools view -b -q 30 {input} | \
+#        samtools sort -@ {threads} -o {output} 2> {log}
+#        """
+
+rule bwa_samse:
     input:
-        "results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sam"
+        fastq="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq",
+        sai="results/bqsr-round-{bqsr_round}/sai/{sample}---{unit}.sai",
+        idx=multiext("genome", ".amb", ".ann", ".bwt", ".pac", ".sa"),
     output:
-        "results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sorted.bam"
-    log:
-        "results/bqsr-round-{bqsr_round}/logs/samtools/sorted_bams/{sample}---{unit}.log"
+        temp("results/bqsr-round-{bqsr_round}/mapped_samse/{sample}---{unit}.sorted.bam"),
     conda:
-        "../envs/samtools.yaml"
-    threads: 10    
-    shell:
-        """
-        samtools view -b -q 30 {input} | \
-        samtools sort -@ {threads} -o {output} 2> {log}
-        """
+        "bwa"
+    params:
+        extra=get_read_group, # r"-r '@RG\tID:{sample}\tSM:{sample}'",  # optional: Extra parameters for bwa.
+        sort="samtools",  # optional: Enable sorting. Possible values: 'none', 'samtools' or 'picard'`
+        sort_order="coordinate",  # optional: Sort by 'queryname' or 'coordinate'
+        sort_extra="-q 30",  # optional: extra arguments for samtools/picard
+    log:
+        "results/bqsr-round-{bqsr_round}/logs/bwa_samse/{sample}--{unit}.log",
+    wrapper:
+        "v1.23.3/bio/bwa/samse"    
         
-# use samtools to merge all bams from common sample together, remove duplicates, and index the resulting bam files.
-rule rmdup:
+# holden removed this in historical processing workflow, but to remove duplicates, you just 
+# need to add -REMOVE_DUPLICATES=T, so I kept this rule because I want to first know the percent dups per sample, using
+# --until flag, and then remove the duplicates by changing the config file
+
+rule mark_duplicates:
     input:
         get_all_bams_of_common_sample
     output:
-        bam="results/bqsr-round-{bqsr_round}/rmdup/{sample}_rmdup.bam",
-        bai="results/bqsr-round-{bqsr_round}/rmdup/{sample}_rmdup.bai"
+        bam="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bam",
+        bai="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bai",
+        metrics="results/bqsr-round-{bqsr_round}/qc/mkdup/{sample}.metrics.txt",
     log:
-        "results/bqsr-round-{bqsr_round}/logs/samtools/rmdup/{sample}.log"
+        "results/bqsr-round-{bqsr_round}/logs/picard/mkdup/{sample}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/benchmarks/mark_duplicates/{sample}.bmk"
     conda:
-        "../envs/samtools.yaml"
-    shell:
-        """
-        samtools merge -f {wildcards.sample}_merged.bam {input} && \
-        samtools rmdup {wildcards.sample}_merged.bam {output.bam} && \
-        samtools index -o {output.bai} {output.bam} && \
-        rm {wildcards.sample}_merged.bam
-        """
+        "picard"
+    params:
+        extra=config["params"]["picard"]["MarkDuplicates"],
+    resources:
+        cpus = 4
+    wrapper:
+        "v1.1.0/bio/picard/markduplicates"
+
+# use samtools to merge all bams from common sample together, remove duplicates, and index the resulting bam files.
+#rule rmdup:
+#    input:
+#        get_all_bams_of_common_sample
+#    output:
+#        bam="results/bqsr-round-{bqsr_round}/rmdup/{sample}_rmdup.bam",
+#        bai="results/bqsr-round-{bqsr_round}/rmdup/{sample}_rmdup.bai"
+#    log:
+#        "results/bqsr-round-{bqsr_round}/logs/samtools/rmdup/{sample}.log"
+#    conda:
+#        "bioinf"
+#    shell:
+#        """
+#        samtools merge -f {wildcards.sample}_merged.bam {input} && \
+#        samtools rmdup {wildcards.sample}_merged.bam {output.bam} && \
+#        samtools index -o {output.bai} {output.bam} && \
+#        rm {wildcards.sample}_merged.bam
+#        """
 
 # use mapDamage2 to rescale base quality scores in accordance with their probability of being damaged
 rule rescale_base_quality_scores:
     input:
         ref="resources/genome.fasta",
-        bam="results/bqsr-round-{bqsr_round}/rmdup/{sample}_rmdup.bam"
+        bam="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bam"
     output:
         log="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/Runtime_log.txt",
         GtoA3p="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/3pGtoA_freq.txt",
@@ -185,26 +246,6 @@ rule rescale_base_quality_scores:
 #    wrapper:
 #        "v1.23.3/bio/bwa/mem"
 
-
-# holden removed this in historical processing workflow
-
-#rule mark_duplicates:
-#    input:
-#        get_all_bams_of_common_sample
-#    output:
-#        bam="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bam",
-#        bai="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bai",
-#        metrics="results/bqsr-round-{bqsr_round}/qc/mkdup/{sample}.metrics.txt",
-#    log:
-#        "results/bqsr-round-{bqsr_round}/logs/picard/mkdup/{sample}.log",
-#    benchmark:
-#        "results/bqsr-round-{bqsr_round}/benchmarks/mark_duplicates/{sample}.bmk"
-#    params:
-#        extra=config["params"]["picard"]["MarkDuplicates"],
-#    resources:
-#        cpus = 1
-#    wrapper:
-#        "v1.1.0/bio/picard/markduplicates"
 
 
 # holden created this to remove dups before mapping. Historical and feather losh have high dup rates.

@@ -8,7 +8,7 @@ rule samtools_stats:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/samtools_stats/{sample}.bmk",
     conda:
-        "../envs/samtools.yaml"
+        "bioinf"
     shell:
         "samtools stats {input} > {output} 2> {log} "
 
@@ -36,6 +36,8 @@ rule multiqc_dir:
         directory("results/bqsr-round-{bqsr_round}/qc/multiqc_data")
     log:
         "results/bqsr-round-{bqsr_round}/logs/multiqc.log",
+    conda:
+        "multiqc"
     params:
         extra="--verbose",  # Optional: extra parameters for multiqc.
     benchmark:
@@ -72,7 +74,7 @@ rule bcf_section_summaries:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/bcftools_stats/{sg_or_chrom}-{filter_condition}.bmk",
     conda:
-        "../envs/bcftools.yaml"
+        "bcftools"
     shell:
         "bcftools view {params.filter_opt} -Ou {input} | "
         " bcftools stats -s {params.comma_samples} "
@@ -97,7 +99,7 @@ rule bcf_maf_section_summaries:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/bcftools_stats/{sg_or_chrom}-maf-{maf}.bmk",
     conda:
-        "../envs/bcftools.yaml"
+        "bcftools"
     shell:
         " bcftools stats -s {params.comma_samples} "
         " -u NMISS:0:{params.stop}:{params.steps}  {input} > "
@@ -110,7 +112,7 @@ rule combine_bcftools_stats:
     output:
         "results/bqsr-round-{bqsr_round}/qc/bcftools_stats/all-{filter_condition}.txt",
     conda:
-        "../envs/bcftools.yaml"
+        "bcftools"
     log:
         "results/bqsr-round-{bqsr_round}/logs/combine_bcftools_stats/{filter_condition}.log",
     shell:
@@ -123,7 +125,7 @@ rule combine_maf_bcftools_stats:
     output:
         "results/bqsr-round-{bqsr_round}/qc/bcftools_stats/all-pass-maf-{maf}.txt",
     conda:
-        "../envs/bcftools.yaml"
+        "bcftools"
     log:
         "results/bqsr-round-{bqsr_round}/logs/combine_maf_bcftools_stats/maf-{maf}.log",
     shell:

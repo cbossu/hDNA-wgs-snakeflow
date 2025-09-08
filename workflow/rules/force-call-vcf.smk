@@ -35,7 +35,7 @@ rule index_force_call_snps:
 	input:
 		config["force_call_vcf"]
 	conda:
-		"../envs/bcftools.yaml"
+		"bcftools"
 	log:
 		"results/logs/index_force_call_snps/log.stderr"
 	output:
@@ -54,7 +54,7 @@ rule prepare_alleles_option_vcfs:
 		sgc="{sg_or_chrom}",
 		sct="{scat}"
 	conda:
-		"../envs/bcftools.yaml"
+		"bcftools"
 	log:
 		"results/bqsr-round-{bqsr_round}/logs/prepare_alleles_option_vcfs/{sg_or_chrom}/{scat}.stderr"
 	output:
@@ -75,7 +75,7 @@ rule prepare_region_files:
 		vcf="results/bqsr-round-{bqsr_round}/force-call/alleles/{sg_or_chrom}/{scat}.vcf.gz",
 		tbi="results/bqsr-round-{bqsr_round}/force-call/alleles/{sg_or_chrom}/{scat}.vcf.gz.tbi"
 	conda:
-		"../envs/bcftools.yaml"
+		"bcftools"
 	log:
 		"results/bqsr-round-{bqsr_round}/logs/prepare_region_files/{sg_or_chrom}/{scat}.stderr"
 	output:
@@ -101,7 +101,7 @@ rule force_call_with_gatk_scatters:
 		java_opts="-Xmx4g",
 		hc=config["params"]["gatk"]["HaplotypeCaller"]
 	conda:
-		"../envs/gatk4.2.6.1.yaml"
+		"gatk4"
 	threads: 4
 	output:
 		vcf="results/bqsr-round-{bqsr_round}/force-call/vcf_sections/{sg_or_chrom}/{scat}.vcf.gz",
@@ -130,7 +130,7 @@ if config["scatter_intervals_file"] != "":
 					scat=unique_scatters_table.scatter_idx,
 				)
 		conda:
-			"../envs/bcftools.yaml"
+			"bcftools"
 		log:
 			"results/bqsr-round-{bqsr_round}/logs/gather_gatk_force_calls/log.stderr",
 		output:

@@ -157,7 +157,7 @@ wildcard_constraints:
 # get all the units of a particular sample
 def get_all_bams_of_common_sample(wildcards):
     s=units.loc[(units["sample"] == wildcards.sample)]
-    return(expand("results/bqsr-round-{{bqsr_round}}/mapped/{sample}---{unit}.sorted.bam", zip,
+    return(expand("results/bqsr-round-{{bqsr_round}}/mapped_samse/{sample}---{unit}.sorted.bam", zip,
         sample = s["sample"].tolist(),
         unit = s["unit"].tolist(),
     ))
@@ -165,7 +165,7 @@ def get_all_bams_of_common_sample(wildcards):
 # same function as above but retrieves sams in historical pipeline
 def get_all_sams_of_common_sample(wildcards):
    s=units.loc[(units["sample"] == wildcards.sample)]
-   return(expand("results/bqsr-round-{{bqsr_round}}/mapped/{sample}---{unit}.sam", zip,
+   return(expand("results/bqsr-round-{{bqsr_round}}/mapped_samse/{sample}---{unit}.sam", zip,
        sample = s["sample"].tolist(),
        unit = s["unit"].tolist(),
     ))

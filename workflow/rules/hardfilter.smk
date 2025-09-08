@@ -19,7 +19,7 @@ rule make_snp_vcf:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/make_snp_vcf/selectvariants-snps-{sg_or_chrom}.bmk"
     conda:
-        "../envs/gatk4.2.6.1.yaml"
+        "gatk4"
     shell:
         " gatk SelectVariants -V {input.vcf}  -select-type SNP -O {output.vcf} > {log} 2>&1 "
 
@@ -37,7 +37,7 @@ rule make_indel_vcf:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/make_indel_vcf/selectvariants-indels-{sg_or_chrom}.bmk"
     conda:
-        "../envs/gatk4.2.6.1.yaml"
+        "gatk4"
     shell:
         " gatk SelectVariants -V {input.vcf}  -select-type INDEL -O {output.vcf} > {log} 2>&1 "
 
@@ -56,7 +56,7 @@ rule hard_filter_snps:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/hard_filter_snps/variantfiltration-snps-{sg_or_chrom}.bmk"
     conda:
-        "../envs/gatk4.2.6.1.yaml"
+        "gatk4"
     shell:
         "gatk VariantFiltration "
         " -V {input.vcf} "
@@ -84,7 +84,7 @@ rule hard_filter_indels:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/hard_filter_indels/variantfiltration-indels-{sg_or_chrom}.bmk"
     conda:
-        "../envs/gatk4.2.6.1.yaml"
+        "gatk4"
     shell:
         "gatk VariantFiltration "
         " -V {input.vcf} "
@@ -110,7 +110,7 @@ rule bung_filtered_vcfs_back_together:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/bung_filtered_vcfs_back_together/bcftools-{sg_or_chrom}.bmk"
     conda:
-        "../envs/bcftools.yaml"
+        "bcftools"
     shell:
         "(bcftools concat -a {input.snp} {input.indel} | "
         " bcftools view -Ob > {output.vcf}; ) 2> {log} "
@@ -128,7 +128,7 @@ rule maf_filter:
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/maf_filter/{sg_or_chrom}-maf-{maf}.bmk"
     conda:
-        "../envs/bcftools.yaml"
+        "bcftools"
     shell:
         " bcftools view -Ob -i 'FILTER=\"PASS\" & MAF > {params.maf} ' "
         " {input} > {output} 2>{log} "

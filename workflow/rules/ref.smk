@@ -56,9 +56,9 @@ rule bwa_index:
         multiext("resources/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
     log:
         "results/bqsr-round-0/logs/bwa_index.log",
-     conda:
+    conda:
         "bwa"
-   benchmark:
+    benchmark:
         "results/bqsr-round-0/benchmarks/bwa_index/bwa_index.bmk",
     resources:
         mem_mb=36900,

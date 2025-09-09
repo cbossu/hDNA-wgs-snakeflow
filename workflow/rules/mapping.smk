@@ -83,6 +83,9 @@ rule align_reads:
     log:
         "results/bqsr-round-{bqsr_round}/logs/bwa_aln/{sample}.{pair}.log",
     threads: 4
+    resources:
+        mem_mb=19200,
+        time="23:59:59"
     wrapper:
         "v1.23.3/bio/bwa/aln"        
 
@@ -117,6 +120,10 @@ rule bwa_samse:
         sort="samtools",  # optional: Enable sorting. Possible values: 'none', 'samtools' or 'picard'`
         sort_order="coordinate",  # optional: Sort by 'queryname' or 'coordinate'
         sort_extra="-q 30",  # optional: extra arguments for samtools/picard
+    threads: 4
+    resources:
+        mem_mb=19200,
+        time="23:59:59"
     log:
         "results/bqsr-round-{bqsr_round}/logs/bwa_samse/{sample}--{unit}.log",
     wrapper:

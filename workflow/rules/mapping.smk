@@ -29,7 +29,7 @@ rule prinseqpp_filter_dust:
     input:
         fq="results/bqsr-round-{bqsr_round}/trim-merged/{sample}---{unit}.merged.fastq.gz"
     output:
-        good="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq"
+        good="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq.gz"
     log:
         "results/bqsr-round-{bqsr_round}/logs/prinseq/{sample}---{unit}.log"
     benchmark:
@@ -41,7 +41,8 @@ rule prinseqpp_filter_dust:
         """
         prinseq++ \
             -fastq {input.fq} \
-            -out_good {output.good} \
+            -out_good {output.good} -out_gz \
+            -out_bad /dev/null \
             -lc_dust=0.07 \
             &> {log}
         """
@@ -71,46 +72,25 @@ rule prinseqpp_filter_dust:
 
 rule align_reads:
     input:
-        ref="resources/genome.fasta",
-        index=expand("resources/genome.fasta.{ext}", ext=["amb", "ann", "bwt", "pac", "sa"]),
-        reads="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq"
+        idx=multiext("resources/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        fastq="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq.gz"
     output:
-        sam="results/bqsr-round-{bqsr_round}/sai/{sample}---{unit}.sai",
+        "results/bqsr-round-{bqsr_round}/sai/{sample}---{unit}.sai",
     conda:
         "bwa"
     params:
         extra="-l 1024",
     log:
-        "results/bqsr-round-{bqsr_round}/logs/bwa_aln/{sample}.{pair}.log",
-    threads: 4
-    resources:
-        mem_mb=19200,
-        time="23:59:59"
+        "results/bqsr-round-{bqsr_round}/logs/bwa_aln/{sample}---{unit}.log",
+    threads: 8
     wrapper:
         "v1.23.3/bio/bwa/aln"        
 
-# use samtools to convert sam to bam files with minimum mapping quality of 30 (for each unit) and sort.
-#rule sam_to_bam_sorted:
-#    input:
-#        "results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sam"
-#    output:
-#        "results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sorted.bam"
-#    log:
-#        "results/bqsr-round-{bqsr_round}/logs/samtools/sorted_bams/{sample}---{unit}.log"
-#    conda:
-#        "bioinf"
-#    threads: 10    
-#    shell:
-#        """
-#        samtools view -b -q 30 {input} | \
-#        samtools sort -@ {threads} -o {output} 2> {log}
-#        """
-
 rule bwa_samse:
     input:
-        fastq="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq",
+        fastq="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq.gz",
         sai="results/bqsr-round-{bqsr_round}/sai/{sample}---{unit}.sai",
-        idx=multiext("genome", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        idx=multiext("resources/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
     output:
         temp("results/bqsr-round-{bqsr_round}/mapped_samse/{sample}---{unit}.sorted.bam"),
     conda:
@@ -121,16 +101,13 @@ rule bwa_samse:
         sort_order="coordinate",  # optional: Sort by 'queryname' or 'coordinate'
         sort_extra="-q 30",  # optional: extra arguments for samtools/picard
     threads: 4
-    resources:
-        mem_mb=19200,
-        time="23:59:59"
     log:
         "results/bqsr-round-{bqsr_round}/logs/bwa_samse/{sample}--{unit}.log",
     wrapper:
         "v1.23.3/bio/bwa/samse"    
         
 # holden removed this in historical processing workflow, but to remove duplicates, you just 
-# need to add -REMOVE_DUPLICATES=T, so I kept this rule because I want to first know the percent dups per sample, using
+# need to add --REMOVE_DUPLICATES true to config file, so I kept this rule because I want to first know the percent dups per sample, using
 # --until flag, and then remove the duplicates by changing the config file
 
 rule mark_duplicates:

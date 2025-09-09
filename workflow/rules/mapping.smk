@@ -15,13 +15,13 @@ rule seqprep2_trim_merge:
         err="results/bqsr-round-{bqsr_round}/logs/seqprep2_trim_merge/{sample}---{unit}.err"
     benchmark:
         "results/bqsr-round-{bqsr_round}/benchmarks/seqprep2_trim_merge/{sample}---{unit}.bmk"
-    shell:
-        "/projects/cbossu@colostate.edu/SeqPrep2/SeqPrep2 " #binary path to change
-        "-f {input.r1} -r {input.r2} "
-        "-1 /dev/null -2 /dev/null -s {output.merged} "
-        "-A {params.adapter_a} -B {params.adapter_b} "
-        "-L {params.minlen} -o {params.overlap} "
-        "> {log.out} 2> {log.err}"
+    shell: """
+        /projects/cbossu@colostate.edu/SeqPrep2/SeqPrep2 \
+            -f {input.r1} -r {input.r2} \
+            -1 /dev/null -2 /dev/null -s {output.merged} \
+            -A {params.adapter_a} -B {params.adapter_b} \
+            -L {params.minlen} -o {params.overlap} > {log.out} 2> {log.err}
+    """
         
         
 # filter out low complexity reads with prinseq dust, threshold = 7

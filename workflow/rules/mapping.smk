@@ -105,6 +105,24 @@ rule bwa_samse:
         "results/bqsr-round-{bqsr_round}/logs/bwa_samse/{sample}--{unit}.log",
     wrapper:
         "v1.23.3/bio/bwa/samse"    
+
+# use samtools to convert sam to bam files with minimum mapping quality of 30 (for each unit) and sort.
+rule filt_sorted_bam:
+    input:
+        "results/bqsr-round-{bqsr_round}/mapped_samse/{sample}---{unit}.sorted.bam"
+    output:
+        "results/bqsr-round-{bqsr_round}/mapped_samse_filt/{sample}---{unit}.sorted.filt2.bam"
+    log:
+        "results/bqsr-round-{bqsr_round}/logs/samtools/filtered_bams/{sample}---{unit}.log"
+    conda:
+        "bioinf"
+    threads: 10
+    shell:
+        """
+        samtools view -b -q 30 -F 4 {input}  -@ {threads} -o {output} 2> {log}
+        """
+#-bq 30 bam files had some unmapped sites that weren't 0, to remove unmapped flag -F 4
+
         
 # holden removed this in historical processing workflow, but to remove duplicates, you just 
 # need to add --REMOVE_DUPLICATES true to config file, so I kept this rule because I want to first know the percent dups per sample, using
@@ -155,6 +173,7 @@ rule rescale_base_quality_scores:
         ref="resources/genome.fasta",
         bam="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bam"
     output:
+        db="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}",
         log="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/Runtime_log.txt",
         GtoA3p="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/3pGtoA_freq.txt",
         CtoT5p="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/5pCtoT_freq.txt",
@@ -169,88 +188,12 @@ rule rescale_base_quality_scores:
     log:
         "results/bqsr-round-{bqsr_round}/logs/mapdamage2/{sample}.log"
     threads: 1
-    wrapper:
-        "v6.2.0/bio/mapdamage2"
-
-# holden removed all this in the historical processing workflow
-#rule trim_reads_pe:
-#    input:
-#        unpack(get_fastq),
-#    output:
-#        r1=temp("results/bqsr-round-{bqsr_round}/trimmed/{sample}---{unit}.1.fastq.gz"),
-#        r2=temp("results/bqsr-round-{bqsr_round}/trimmed/{sample}---{unit}.2.fastq.gz"),
-#        #r1_unpaired=temp("results/bqsr-round-{bqsr_round}/trimmed/{sample}---{unit}.1.unpaired.fastq.gz"),
-#        #r2_unpaired=temp("results/bqsr-round-{bqsr_round}/trimmed/{sample}---{unit}.2.unpaired.fastq.gz"),
-#        html="results/bqsr-round-{bqsr_round}/qc/fastp/{sample}---{unit}.html",
-#        json="results/bqsr-round-{bqsr_round}/qc/fastp/{sample}---{unit}.json"
-#    conda:
-#        "../envs/fastp.yaml"
-#    log:
-#        out="results/bqsr-round-{bqsr_round}/logs/trim_reads_pe/{sample}---{unit}.log",
-#        err="results/bqsr-round-{bqsr_round}/logs/trim_reads_pe/{sample}---{unit}.err"
-#    benchmark:
-#        "results/bqsr-round-{bqsr_round}/benchmarks/trim_reads_pe/{sample}---{unit}.bmk"
-#    params:
-#        trim_settings=config["params"]["fastp"]["pe"]["trimmer"],
-#    shell:
-#        " fastp -i {input.r1} -I {input.r2} "
-#        "       -o {output.r1} -O {output.r2} "
-#        "       -h {output.html} -j {output.json} "
-#        "  {params.trim_settings} > {log.out} 2> {log.err} "
-
-
-
-
-# eca modified this.  The idea is to give 4 threads to bwa.
-# and it will get 4 cores and also take all the memory you'd
-# expect for those cores.  Sedna's machines are almost all
-# 20 core units, so this should fill them up OK.
-#rule map_reads:
-#    input:
-#        reads = [
-#            "results/bqsr-round-{bqsr_round}/trimmed/{sample}---{unit}.1.fastq.gz",
-#            "results/bqsr-round-{bqsr_round}/trimmed/{sample}---{unit}.2.fastq.gz"
-#        ],
-#        idx=rules.bwa_index.output,
-#    output:
-#        temp("results/bqsr-round-{bqsr_round}/mapped/{sample}---{unit}.sorted.bam"),
-#    log:
-#        "results/bqsr-round-{bqsr_round}/logs/map_reads/{sample}---{unit}.log",
-#    benchmark:
-#        "results/bqsr-round-{bqsr_round}/benchmarks/map_reads/{sample}---{unit}.bmk"
-#    params:
-#        extra=get_read_group,
-#        sorting="samtools",
-#        sort_order="coordinate",
-#        sort_extra=""
-#    threads: 4
-#    resources:
-#        mem_mb=19200,
-#        time="23:59:59"
+    shell: """
+        mapDamage --input {input.bam} --reference {input.ref} \
+        --folder {output.db} --rescale-out {output.rescaled_bam} --rescale
+        """
 #    wrapper:
-#        "v1.23.3/bio/bwa/mem"
+#        "v6.2.0/bio/mapdamage2"
 
-
-
-# holden created this to remove dups before mapping. Historical and feather losh have high dup rates.
-#rule remove_duplicates:
-#    input:
-#        bam="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bam"
-#    output:
-#        bam="results/bqsr-round-{bqsr_round}/rmdup/{sample}.bam",
-#        bai="results/bqsr-round-{bqsr_round}/rmdup/{sample}.bam.bai"
-#    log:
-#        "results/bqsr-round-{bqsr_round}/logs/samtools/rmdup/{sample}.log"
-#    benchmark:
-#        "results/bqsr-round-{bqsr_round}/benchmarks/remove_duplicates/{sample}.bmk"
-#    resources:
-#        cpus = 1
-#    conda:
-#        "../envs/samtools.yaml"
-#    shell:
-#        """
-#        samtools view -@ {resources.cpus} -b -F 1024 {input.bam} > {output.bam} 2> {log}
-#        samtools index -@ {resources.cpus} {output.bam} 2>> {log}
-#        """
-
-
+### need to define absolute path to tmpdir in hpcc_profile config file! Otherwise this snakemake rule failed regardless of shell or wrapper usage (Bayesian estimation never completed)
+### NOTE: mkdir rescaled_bam inside mapdamage2 folder first- this might not be necessary once the tmpdir was fixed, but it was done anyway.

@@ -9,14 +9,15 @@ rule get_genome:
         url=config["ref"]["genome_url"],
     conda:
         "wget"
-    shell:
-        " (tmp_dir=$(mktemp -d) && "
-        " URL={params.url} && "
-        " if [[ $URL =~ \.gz$ ]]; then EXT='.gz'; else EXT=''; fi && "
-        " wget -O $tmp_dir/file$EXT $URL && "
-        " if [[ $URL =~ \.gz$ ]]; then gunzip $tmp_dir/file$EXT; fi && "
-        " mv $tmp_dir/file {output}) > {log} 2>&1 "
-
+    shell: """
+        (tmp_dir=$(mktemp -d)
+        URL={params.url}
+        if [[ $URL =~ \.gz$ ]]; then EXT='.gz'; else EXT=''; fi 
+        wget -O $tmp_dir/file$EXT $URL 
+        if [[ $URL =~ \.gz$ ]]; then gunzip $tmp_dir/file$EXT; fi 
+        mv $tmp_dir/file {output}) > {log} 2>&1
+    """
+    
 rule genome_faidx:
     input:
         "resources/genome.fasta",
@@ -28,9 +29,9 @@ rule genome_faidx:
         "results/bqsr-round-0/benchmarks/genome_faidx/genome_faidx.bmk",
     conda:
         "bioinf"
-    shell:
-        "samtools faidx {input}"
-
+    shell: """
+        samtools faidx {input}
+    """
 
 rule genome_dict:
     input:
@@ -40,12 +41,12 @@ rule genome_dict:
     log:
         "results/bqsr-round-0/logs/genome_dict.log",
     benchmark:
-        "results/bqsr-round-0/benchmarks/genome_dict/genome_dict.bmk"
+        "results/bqsr-round-0/benchmarks/genome_dict/genome_dict.bmk",
     conda:
         "bioinf"
-    shell:
-        "samtools dict {input} > {output} 2> {log} "
-
+    shell: """
+        samtools dict {input} > {output} 2> {log} 
+    """
 
 
 

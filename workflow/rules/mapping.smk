@@ -173,7 +173,7 @@ rule rescale_base_quality_scores:
         ref="resources/genome.fasta",
         bam="results/bqsr-round-{bqsr_round}/mkdup/{sample}.bam"
     output:
-        db="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}",
+        db=directory("results/bqsr-round-{bqsr_round}/mapdamage2/{sample}"),
         log="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/Runtime_log.txt",
         GtoA3p="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/3pGtoA_freq.txt",
         CtoT5p="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/5pCtoT_freq.txt",

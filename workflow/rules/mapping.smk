@@ -4,7 +4,7 @@ rule seqprep2_trim_merge:
     input:
         unpack(get_fastq)
     output:
-        merged="results/bqsr-round-{bqsr_round}/trim-merged/{sample}---{unit}.merged.fastq.gz"
+        merged=temp("results/bqsr-round-{bqsr_round}/trim-merged/{sample}---{unit}.merged.fastq.gz")
     params:
         adapter_a="AGATCGGAAGAGCACACGTCTGAACTCCAGTCA", # same as in config file
         adapter_b="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
@@ -29,7 +29,7 @@ rule prinseqpp_filter_dust:
     input:
         fq="results/bqsr-round-{bqsr_round}/trim-merged/{sample}---{unit}.merged.fastq.gz"
     output:
-        good="results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq.gz"
+        good=temp("results/bqsr-round-{bqsr_round}/filtered_fq/{sample}---{unit}.filtered.fastq.gz")
     log:
         "results/bqsr-round-{bqsr_round}/logs/prinseq/{sample}---{unit}.log"
     benchmark:
@@ -48,7 +48,7 @@ rule prinseqpp_filter_dust:
         """
 
 #align the filtered historical dna to the reference genome using the aln (-l 1024) and samse commands in BWA.
-# I split this into two functions using wrappers so I could sort and add read groups and filter by -q 30
+# I split this into two functions using wrappers so I could sort and add read groups
 #rule align_reads:
 #    input:
 #        ref="resources/genome.fasta",
@@ -106,12 +106,14 @@ rule bwa_samse:
     wrapper:
         "v1.23.3/bio/bwa/samse"    
 
-# use samtools to convert sam to bam files with minimum mapping quality of 30 (for each unit) and sort.
+# use samtools to filter bam files with minimum mapping quality of 30 (for each unit).
+#NOTE: intial run with just -bq 30 got an error in mark_duplicates that unmapped sites didn't have a quality score of 0,
+# so I also removed unmapped reads with the flag function, -F 4 (sizes were not super different and error does not exist in mark_duplicates)
 rule filt_sorted_bam:
     input:
         "results/bqsr-round-{bqsr_round}/mapped_samse/{sample}---{unit}.sorted.bam"
     output:
-        "results/bqsr-round-{bqsr_round}/mapped_samse_filt/{sample}---{unit}.sorted.filt2.bam"
+        temp("results/bqsr-round-{bqsr_round}/mapped_samse_filt/{sample}---{unit}.sorted.filt2.bam")
     log:
         "results/bqsr-round-{bqsr_round}/logs/samtools/filtered_bams/{sample}---{unit}.log"
     conda:
@@ -121,12 +123,10 @@ rule filt_sorted_bam:
         """
         samtools view -b -q 30 -F 4 {input}  -@ {threads} -o {output} 2> {log}
         """
-#-bq 30 bam files had some unmapped sites that weren't 0, to remove unmapped flag -F 4
-
         
 # holden removed this in historical processing workflow, but to remove duplicates, you just 
-# need to add --REMOVE_DUPLICATES true to config file, so I kept this rule because I want to first know the percent dups per sample, using
-# --until flag, and then remove the duplicates by changing the config file
+# need to add --REMOVE_DUPLICATES true to config file, so I kept this rule because if I want to first know the percent dups per sample, using
+# --until flag, I can then remove the duplicates by changing the config file, or change config file immediately
 
 rule mark_duplicates:
     input:
@@ -148,26 +148,10 @@ rule mark_duplicates:
     wrapper:
         "v1.1.0/bio/picard/markduplicates"
 
-# use samtools to merge all bams from common sample together, remove duplicates, and index the resulting bam files.
-#rule rmdup:
-#    input:
-#        get_all_bams_of_common_sample
-#    output:
-#        bam="results/bqsr-round-{bqsr_round}/rmdup/{sample}_rmdup.bam",
-#        bai="results/bqsr-round-{bqsr_round}/rmdup/{sample}_rmdup.bai"
-#    log:
-#        "results/bqsr-round-{bqsr_round}/logs/samtools/rmdup/{sample}.log"
-#    conda:
-#        "bioinf"
-#    shell:
-#        """
-#        samtools merge -f {wildcards.sample}_merged.bam {input} && \
-#        samtools rmdup {wildcards.sample}_merged.bam {output.bam} && \
-#        samtools index -o {output.bai} {output.bam} && \
-#        rm {wildcards.sample}_merged.bam
-#        """
 
 # use mapDamage2 to rescale base quality scores in accordance with their probability of being damaged
+# This failed UNTIL I put absolute path to tmpdir in alpine config.file (so could also use wrapper here, but shell works)
+# potentially add --merge-reference-sequences because got a warning that there were a lot of reference sequences
 rule rescale_base_quality_scores:
     input:
         ref="resources/genome.fasta",
@@ -183,6 +167,8 @@ rule rescale_base_quality_scores:
         lg_dist="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/lgdistribution.txt",
         misincorp="results/bqsr-round-{bqsr_round}/mapdamage2/{sample}/misincorporation.txt",
         rescaled_bam="results/bqsr-round-{bqsr_round}/mapdamage2/rescaled_bams/{sample}.rescaled.bam"
+    conda:
+        "mapDamage2"
     params:
         extra="--rescale"
     log:
@@ -190,10 +176,8 @@ rule rescale_base_quality_scores:
     threads: 1
     shell: """
         mapDamage --input {input.bam} --reference {input.ref} \
-        --folder {output.db} --rescale-out {output.rescaled_bam} --rescale
+        --folder {output.db} --rescale-out {output.rescaled_bam} --rescale \
+        --merge-reference-sequences        
         """
 #    wrapper:
 #        "v6.2.0/bio/mapdamage2"
-
-### need to define absolute path to tmpdir in hpcc_profile config file! Otherwise this snakemake rule failed regardless of shell or wrapper usage (Bayesian estimation never completed)
-### NOTE: mkdir rescaled_bam inside mapdamage2 folder first- this might not be necessary once the tmpdir was fixed, but it was done anyway.

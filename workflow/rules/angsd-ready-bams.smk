@@ -14,7 +14,6 @@
 # Simple clipping of overlaps in the mkduped BAMs
 rule clip_overlaps:
     input:
-        #"results/bqsr-round-{bqsr_round}/mkdup/{sample}.bam"
         "results/bqsr-round-{bqsr_round}/mapdamage2/rescaled_bams/{sample}.rescaled.bam"
     output:
         bam="results/bqsr-round-{bqsr_round}/overlap_clipped/{sample}.bam",

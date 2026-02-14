@@ -1,0 +1,92 @@
+executor: cluster-generic
+cluster-generic-submit-cmd:
+  mkdir -p results/slurm_logs/{rule} &&
+  sbatch
+    --partition=amilan
+    --account=csu88_alpine2
+    --cpus-per-task={threads}
+    --mem={resources.mem_mb}
+    --time={resources.time}
+    --qos=normal
+    --job-name=smk-{rule}-{wildcards}
+    --output=results/slurm_logs/{rule}/{rule}-{wildcards}-%j.out
+    --error=results/slurm_logs/{rule}/{rule}-{wildcards}-%j.err
+    --parsable
+default-resources:
+  - time="08:00:00"
+  - mem_mb=3740
+  - tmpdir="/scratch/alpine/cbossu@colostate.edu/ROFI/hDNA-wgs-snakeflow/results/snake-tmp"
+restart-times: 0
+max-jobs-per-second: 10
+max-status-checks-per-second: 50
+local-cores: 1
+latency-wait: 120
+cores: 2400
+jobs: 450
+keep-going: True
+rerun-incomplete: True
+printshellcmds: True
+use-conda: True
+rerun-trigger: mtime
+cluster-generic-status-cmd: status-sacct-robust.sh
+cluster-generic-cancel-cmd: scancel
+cluster-generic-cancel-nargs: 4000
+
+
+set-threads:
+  seqprep2_trim_merge: 10
+  prinseqpp_filter_dust: 4
+  align_reads: 20
+  filt_sorted_bam: 4
+  bwa_samse: 10
+  rescale_base_quality_scores: 10
+  realigner_target_creator: 4
+  genomics_db_import_chromosomes: 16
+  genomics_db_import_scaffold_groups: 10
+  genomics_db2vcf_scattered: 10
+  mark_duplicates: 10
+  make_gvcf_sections: 20
+  clip_overlaps: 24
+  
+  
+set-resources:
+  seqprep2_trim_merge:
+    mem_mb: 37400
+    time: "'23:59:59'"
+  prinseqpp_filter_dust:
+    mem_mb: 14960
+    time: "'23:59:59'"
+  align_reads:
+    mem_mb: 74400
+    time: "'23:59:59'"  
+  bwa_samse:
+    mem_mb: 37400
+    time: "'23:59:59'"
+  filt_sorted_bam:
+    mem_mb: 14900
+    time: "'23:59:59'"
+  rescale_base_quality_scores:
+    mem_mb: 37400
+    time: "'23:59:59'"
+  make_gvcf_sections:
+    mem_mb: 89700
+    time: "'23:59:59'"
+  genomics_db_import_chromosomes:
+    mem_mb: 59840
+    time: "'23:59:59'"
+  genomics_db_import_scaffold_groups:
+    mem_mb: 37400
+    time: "'23:59:59'"
+  genomics_db2vcf_scattered:
+    mem_mb: 37400
+    time: "'23:59:59'"
+  multiqc_dir:
+    mem_mb: 37000
+  bwa_index:
+    mem_mb: 37000
+  realigner_target_creator:
+    mem_mb: 14960
+  mark_duplicates:
+    mem_mb: 37400
+  clip_overlaps:
+    mem_mb: 89760

@@ -94,12 +94,12 @@ rule bwa_samse:
     output:
         temp("results/bqsr-round-{bqsr_round}/mapped_samse/{sample}---{unit}.sorted.bam"),
     conda:
-        "bwa"
+        "bwa0.7.19"
     params:
         extra=get_read_group, # r"-r '@RG\tID:{sample}\tSM:{sample}'",  # optional: Extra parameters for bwa.
         sort="samtools",  # optional: Enable sorting. Possible values: 'none', 'samtools' or 'picard'`
         sort_order="coordinate",  # optional: Sort by 'queryname' or 'coordinate'
-        sort_extra="-q 30",  # optional: extra arguments for samtools/picard
+        sort_extra="",  # optional: extra arguments for samtools/picard
     threads: 4
     log:
         "results/bqsr-round-{bqsr_round}/logs/bwa_samse/{sample}--{unit}.log",

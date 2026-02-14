@@ -104,7 +104,7 @@ rule bwa_samse:
     log:
         "results/bqsr-round-{bqsr_round}/logs/bwa_samse/{sample}--{unit}.log",
     wrapper:
-        "v1.23.3/bio/bwa/samse"    
+        "v8.1.1/bio/bwa/samse"    
 
 # use samtools to filter bam files with minimum mapping quality of 30 (for each unit).
 #NOTE: intial run with just -bq 30 got an error in mark_duplicates that unmapped sites didn't have a quality score of 0,
